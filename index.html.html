@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Death Note OS - WebOS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;700&family=Special+Elite&display=swap');
+
+    :root {
+      --bg-color: #050508;
+      --card-bg: rgba(18, 18, 24, 0.85);
+      --text-color: #E0E0E0;
+      --accent-red: #8B0000;
+      --accent-crimson: #DC143C;
+      --glow-color: rgba(220, 20, 60, 0.4);
+      --border-color: #2A2A35;
+      --paper-bg: rgba(20, 18, 16, 0.92);
+      --paper-text: #D4C5B9;
+      --font-heading: 'Cinzel Decorative', 'Cinzel', serif;
+      --font-body: 'Cinzel', serif;
+      --font-notebook: 'Special Elite', cursive;
+    }
+
+    body.l-theme {
+      --bg-color: #030712;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --accent-red: #1E3A8A;
+      --accent-crimson: #3B82F6;
+      --glow-color: rgba(59, 130, 246, 0.4);
+      --paper-bg: rgba(15, 23, 42, 0.92);
+      --paper-text: #93C5FD;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-body);
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      transition: background 0.5s ease;
+    }
+
+    /* Ambient CRT Scanline Effect */
+    body::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 999;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    /* Background Particle Canvas */
+    #bgCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Desktop Area */
+    #desktop {
+      width: 100vw;
+      height: calc(100vh - 50px);
+      position: relative;
+      padding: 20px;
+      z-index: 2;
+    }
+
+    /* Desktop Icons */
+    .icon-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+
+    .icon {
+      width: 85px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      color: var(--text-color);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .icon:hover {
+      transform: translateY(-4px) scale(1.05);
+    }
+
+    .icon-box {
+      width: 58px;
+      height: 58px;
+      background: var(--card-bg);
+      border: 1px solid var(--accent-red);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+      box-shadow: 0 0 12px var(--glow-color);
+      backdrop-filter: blur(4px);
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+
+    .icon:hover .icon-box {
+      border-color: var(--accent-crimson);
+      box-shadow: 0 0 20px var(--accent-crimson);
+    }
+
+    .icon svg {
+      width: 28px;
+      height: 28px;
+      fill: var(--text-color);
+      transition: fill 0.3s ease;
+    }
+
+    .icon:hover svg {
+      fill: var(--accent-crimson);
+    }
+
+    .icon span {
+      font-size: 11px;
+      text-align: center;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      font-weight: 700;
+    }
+
+    /* Window Styling */
+    .window {
+      position: absolute;
+      width: 440px;
+      background: var(--paper-bg);
+      border: 1px solid var(--accent-red);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), 0 0 20px var(--glow-color);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      border-radius: 2px;
+      opacity: 0;
+      transform: scale(0.95);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    .window.active-win {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    .window.focused {
+      border-color: var(--accent-crimson);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.95), 0 0 25px var(--accent-crimson);
+    }
+
+    .window-header {
+      background: rgba(5, 5, 5, 0.95);
+      padding: 12px 16px;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--accent-red);
+    }
+
+    .window-title {
+      font-family: var(--font-heading);
+      font-size: 13px;
+      color: var(--accent-crimson);
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px var(--glow-color);
+    }
+
+    .close-btn {
+      color: #777;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: color 0.2s ease;
+    }
+
+    .close-btn:hover {
+      color: var(--accent-crimson);
+    }
+
+    .window-body {
+      padding: 18px;
+      font-family: var(--font-notebook);
+      color: var(--paper-text);
+      max-height: 320px;
+      overflow-y: auto;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    /* Custom Scrollbar */
+    .window-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    .window-body::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .window-body::-webkit-scrollbar-thumb {
+      background: var(--accent-red);
+      border-radius: 3px;
+    }
+
+    /* Notebook Inputs */
+    .death-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px dashed var(--accent-red);
+      color: var(--paper-text);
+      font-family: var(--font-notebook);
+      font-size: 16px;
+      padding: 8px 4px;
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color 0.3s ease;
+    }
+
+    .death-input:focus {
+      border-bottom-color: var(--accent-crimson);
+    }
+
+    .action-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--accent-red);
+      color: var(--accent-crimson);
+      padding: 10px 15px;
+      font-family: var(--font-body);
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 5px;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .action-btn:hover {
+      background: var(--accent-red);
+      color: #FFF;
+      box-shadow: 0 0 15px var(--accent-crimson);
+    }
+
+    .entry-item {
+      border-bottom: 1px dotted var(--accent-red);
+      padding: 6px 0;
+      animation: fadeIn 0.4s ease-in-out;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: opacity 0.5s ease;
+    }
+
+    .entry-item.eliminated span:first-child {
+      text-decoration: line-through;
+      color: var(--accent-crimson);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Target Removal Modal Popup */
+    #eliminationModal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    #eliminationModal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      background: #000;
+      border: 2px solid var(--accent-crimson);
+      box-shadow: 0 0 30px var(--accent-crimson);
+      padding: 30px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      transform: scale(0.8);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #eliminationModal.active .modal-box {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-family: var(--font-heading);
+      color: var(--accent-crimson);
+      font-size: 20px;
+      letter-spacing: 3px;
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px var(--glow-color);
+    }
+
+    .modal-body {
+      font-family: var(--font-notebook);
+      color: var(--text-color);
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* Taskbar */
+    #taskbar {
+      height: 50px;
+      background: rgba(2, 2, 4, 0.95);
+      border-top: 1px solid var(--border-color);
+      position: fixed;
+      bottom: 0;
+      width: 100vw;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .taskbar-brand {
+      font-family: var(--font-heading);
+      font-size: 14px;
+      color: var(--accent-crimson);
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px var(--glow-color);
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--accent-red);
+      color: var(--text-color);
+      padding: 6px 14px;
+      font-family: var(--font-body);
+      cursor: pointer;
+      font-size: 11px;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent-crimson);
+      box-shadow: 0 0 12px var(--glow-color);
+      color: #FFF;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Particle Background Canvas -->
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- Desktop Area -->
+  <div id="desktop">
+    <div class="icon-grid">
+      <!-- Icon 1: Rules -->
+      <div class="icon" onclick="openWindow('rulesWin')">
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+        </div>
+        <span>RULES</span>
+      </div>
+
+      <!-- Icon 2: Death Note -->
+      <div class="icon" onclick="openWindow('notebookWin')">
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </div>
+        <span>NOTEBOOK</span>
+      </div>
+
+      <!-- Icon 3: Devlogs -->
+      <div class="icon" onclick="openWindow('devlogWin')">
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        </div>
+        <span>DEVLOGS</span>
+      </div>
+    </div>
+
+    <!-- Window 1: Rules -->
+    <div class="window" id="rulesWin" style="top: 80px; left: 160px;">
+      <div class="window-header">
+        <span class="window-title">RULES OF THE NOTE</span>
+        <span class="close-btn" onclick="closeWindow('rulesWin')">✕</span>
+      </div>
+      <div class="window-body">
+        <p><strong>I.</strong> The human whose name is written in this note shall die.</p><br>
+        <p><strong>II.</strong> This note will not take effect unless the writer has the person's face in mind when writing their name.</p><br>
+        <p><strong>III.</strong> The name will take effect after 60 seconds of being inscribed into the note.</p><br>
+        <p><strong>IV.</strong> Drag windows freely by clicking and holding their headers.</p>
+      </div>
+    </div>
+
+    <!-- Window 2: Notebook -->
+    <div class="window" id="notebookWin" style="top: 100px; left: 620px;">
+      <div class="window-header">
+        <span class="window-title">DEATH NOTE</span>
+        <span class="close-btn" onclick="closeWindow('notebookWin')">✕</span>
+      </div>
+      <div class="window-body">
+        <p style="margin-bottom: 12px; font-size: 13px;">Inscribe target identity below:</p>
+        <input type="text" id="targetInput" class="death-input" placeholder="Full Name..." onkeydown="if(event.key==='Enter') addEntry()">
+        <button class="action-btn" onclick="addEntry()">INSCRIBE NAME</button>
+        <div id="entryList" style="margin-top: 15px;"></div>
+      </div>
+    </div>
+
+    <!-- Window 3: Devlogs -->
+    <div class="window" id="devlogWin" style="top: 260px; left: 220px;">
+      <div class="window-header">
+        <span class="window-title">DEVELOPMENT LOGS</span>
+        <span class="close-btn" onclick="closeWindow('devlogWin')">✕</span>
+      </div>
+      <div class="window-body">
+        <p><strong>Devlog #1:</strong> Constructed core WebOS architecture, typography hierarchy, and dark ambient styling.</p><br>
+        <p><strong>Devlog #2:</strong> Integrated particle ash physics engine and custom window positioning modules.</p><br>
+        <p><strong>Devlog #3:</strong> Implemented 60s elimination timer with Ryuk notification popups and synthetic Kira laugh audio effects.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Target Removal Modal -->
+  <div id="eliminationModal">
+    <div class="modal-box">
+      <div class="modal-title">RYUK</div>
+      <div class="modal-body" id="modalTargetText">ryuk : the person dead</div>
+      <button class="action-btn" onclick="closeModal()">ACKNOWLEDGE</button>
+    </div>
+  </div>
+
+  <!-- Taskbar -->
+  <div id="taskbar">
+    <div class="taskbar-brand">DEATHNOTE</div>
+    <button class="theme-toggle" onclick="toggleTheme()">SWITCH ALLIANCE (KIRA / L)</button>
+  </div>
+
+  <script>
+    // Audio Context Synthesizer
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
+    }
+
+    function playSfx(type) {
+      initAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'write') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'click') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(120, now);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      } else if (type === 'theme') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'strike') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(80, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.5);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else if (type === 'kira_laugh') {
+        // Synthesizes a menacing, rising, rapid-pulsing Kira laughter sound
+        const bursts = 14;
+        let pitch = 220;
+
+        for (let i = 0; i < bursts; i++) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.type = 'sawtooth';
+          const startTime = now + (i * 0.11);
+          
+          // Escalating maniacal pitch profile
+          pitch += (i < 7 ? 25 : -15);
+          osc.frequency.setValueAtTime(pitch, startTime);
+          osc.frequency.exponentialRampToValueAtTime(pitch * 0.7, startTime + 0.09);
+
+          gain.gain.setValueAtTime(0.25, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.09);
+
+          osc.start(startTime);
+          osc.stop(startTime + 0.09);
+        }
+      }
+    }
+
+    // Particle Background System
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = canvas.height + Math.random() * 20;
+        this.size = Math.random() * 2.5 + 0.5;
+        this.speedY = Math.random() * 0.8 + 0.2;
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.opacity = Math.random() * 0.6 + 0.2;
+      }
+
+      update() {
+        this.y -= this.speedY;
+        this.x += this.speedX;
+        if (this.y < -10) this.reset();
+      }
+
+      draw() {
+        ctx.fillStyle = document.body.classList.contains('l-theme')
+          ? `rgba(59, 130, 246, ${this.opacity})`
+          : `rgba(220, 20, 60, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 65; i++) {
+      particles.push(new Particle());
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // Window Dragging & Depth Control
+    let topZIndex = 20;
+
+    function focusWindow(win) {
+      document.querySelectorAll('.window').forEach(w => w.classList.remove('focused'));
+      win.style.zIndex = ++topZIndex;
+      win.classList.add('focused');
+    }
+
+    document.querySelectorAll('.window').forEach(win => {
+      const header = win.querySelector('.window-header');
+      let isDragging = false;
+      let offsetX, offsetY;
+
+      win.addEventListener('mousedown', () => focusWindow(win));
+
+      header.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        offsetX = e.clientX - win.offsetLeft;
+        offsetY = e.clientY - win.offsetTop;
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+          win.style.left = `${e.clientX - offsetX}px`;
+          win.style.top = `${e.clientY - offsetY}px`;
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+    });
+
+    // Window Controls
+    function openWindow(id) {
+      playSfx('click');
+      const win = document.getElementById(id);
+      win.classList.add('active-win');
+      focusWindow(win);
+    }
+
+    function closeWindow(id) {
+      playSfx('click');
+      const win = document.getElementById(id);
+      win.classList.remove('active-win');
+    }
+
+    // Interactive Notebook Operations (60s Timer & Ryuk Popup & Kira Laughter)
+    function addEntry() {
+      const input = document.getElementById('targetInput');
+      const list = document.getElementById('entryList');
+      const name = input.value.trim();
+
+      if (name !== '') {
+        playSfx('write');
+        const item = document.createElement('div');
+        item.className = 'entry-item';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = `• ${name}`;
+        
+        const timerSpan = document.createElement('span');
+        timerSpan.style.fontSize = '11px';
+        timerSpan.style.opacity = '0.6';
+        
+        item.appendChild(nameSpan);
+        item.appendChild(timerSpan);
+        list.appendChild(item);
+        input.value = '';
+
+        let timeLeft = 60;
+        timerSpan.textContent = `${timeLeft}s`;
+
+        const countdown = setInterval(() => {
+          timeLeft--;
+          if (timeLeft > 0) {
+            timerSpan.textContent = `${timeLeft}s`;
+          } else {
+            clearInterval(countdown);
+            timerSpan.textContent = 'EXPIRED';
+            item.classList.add('eliminated');
+
+            // Trigger Pop-up ONLY if currently in Kira mode (not L-theme)
+            if (!document.body.classList.contains('l-theme')) {
+              showEliminationModal();
+            }
+          }
+        }, 1000);
+      }
+    }
+
+    function showEliminationModal() {
+      playSfx('strike');
+      setTimeout(() => playSfx('kira_laugh'), 200); // Play Kira's laugh sequence
+      
+      const modal = document.getElementById('eliminationModal');
+      const text = document.getElementById('modalTargetText');
+      text.textContent = 'ryuk : the person dead';
+      modal.classList.add('active');
+    }
+
+    function closeModal() {
+      playSfx('click');
+      document.getElementById('eliminationModal').classList.remove('active');
+    }
+
+    // Theme Switcher
+    function toggleTheme() {
+      playSfx('theme');
+      document.body.classList.toggle('l-theme');
+    }
+
+    // Auto open notebook on load
+    window.addEventListener('DOMContentLoaded', () => {
+      openWindow('notebookWin');
+    });
+  </script>
+</body>
+</html>
+
+
