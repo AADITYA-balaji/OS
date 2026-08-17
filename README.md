@@ -7,7 +7,7 @@ I've loved Death Note ever since I was a kid. I was obsessed with the mind games
 
 
 
-🚀 Cool Features:
+Cool Features:
 
 Switch Sides: You can click a button to switch between Kira Mode and L Mode depending on who you want to be
 
