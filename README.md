@@ -29,6 +29,11 @@ Moving Windows: You can click and drag the windows anywhere on the screen by hol
 
  Devlogs: The behind the scenes 
 
+
+
+
+Note: AI was used to help create the particle effect and for the sound effects
+
  
  
  <img width="392" height="228" alt="images" src="https://github.com/user-attachments/assets/522a7c54-20f3-4f28-a3cd-c3237033cc2f" />
